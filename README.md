@@ -1,7 +1,7 @@
 # chan grabber
 Download content from imageboards
 
-Support imageboard
+Support imageboards
 -------------------
 - 2ch
 - iichan
