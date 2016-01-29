@@ -3,9 +3,9 @@ Download content from imageboards
 
 Support imageboards
 -------------------
-- 2ch
-- iichan
-- 4chan
-- Dobrochan
-- Krautchan
-- etc
+- [x] 2ch
+- [x] iichan
+- [x] 4chan
+- [x] Dobrochan
+- [x] Krautchan
+- [x] etc
