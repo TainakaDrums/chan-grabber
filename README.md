@@ -1,11 +1,11 @@
-# chan_grabber
+# chan grabber
 Download content from imageboards
 
 Support imageboard
 -------------------
-2ch
-iichan
-4chan
-Dobrochan
-Krautchan
-etc
+- 2ch
+- iichan
+- 4chan
+- Dobrochan
+- Krautchan
+- etc
