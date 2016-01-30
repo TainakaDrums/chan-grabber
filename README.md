@@ -9,3 +9,7 @@ Support imageboards
 - [x] Dobrochan
 - [x] Krautchan
 - [x] etc
+
+Usage
+-------------------
+`chan_grabber.py -l THREAD_LINK  [-t [webm | all| pic | gif ] [-d DIR_NAME]`
