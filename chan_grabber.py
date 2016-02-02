@@ -24,6 +24,7 @@ class Download_pics(threading.Thread):
 
     def __init__ (self):
         threading.Thread.__init__(self)
+        self.daemon = True
 
     def run(self):
 
@@ -159,7 +160,6 @@ if __name__ == '__main__':
 
     for _ in range(10):
         thread=Download_pics()
-        thread.daemon = True
         thread.start()
 
     q.join()
