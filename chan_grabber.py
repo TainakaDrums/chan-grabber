@@ -4,6 +4,7 @@ import threading
 import os.path
 import os
 import argparse
+import time
 from itertools import chain
 
 if sys.version_info.major == 2:
@@ -20,6 +21,7 @@ else:
     import queue
 
 
+
 class Download_pics(threading.Thread):
 
     def __init__ (self):
@@ -31,19 +33,16 @@ class Download_pics(threading.Thread):
         while True:
             page=None
             link=q.get()
-            link_on_pic=quote(link, ":/")
+
             file_name=link.split("/")[-1]
 
-            if link_on_pic.startswith("//"):
-                link_on_pic=parsed_link.scheme+":"+link_on_pic
-            elif not link_on_pic.startswith("http"):
-                link_on_pic=parsed_link.scheme+"://"+parsed_link.hostname+link_on_pic
+            pic_url = url_treatment(link)
 
-            link_on_pic=urllib2.Request( link_on_pic, headers=headers)
+            pic_url=urllib2.Request( pic_url, headers=headers)
 
             while not page:
                 try:
-                    page=urllib2.urlopen(link_on_pic)                    
+                    page=urllib2.urlopen(pic_url)
                 except HTTPError as e:
                     if e.getcode() == 503:
                         time.sleep(2)
@@ -56,7 +55,7 @@ class Download_pics(threading.Thread):
                 data=page.read()
 
                 if data:
-                    with open( os.path.join(dir_name, file_name) , "wb") as file:
+                    with open( os.path.join(path, file_name) , "wb") as file:
                             file.write(data)
 
             q.task_done()
@@ -74,7 +73,22 @@ def create_dir_name(parsed_link):
         
     return dir_name
 
-    
+
+def url_treatment(pic_url):
+
+    pic_url=quote(pic_url, ":/")
+
+    if pic_url.startswith("//"):
+        pic_url=parsed_link.scheme+":"+pic_url
+    elif pic_url.startswith("../"):
+        fragments = parsed_link.geturl().split("/")[:-2]
+        fragments.append(pic_url.lstrip("../"))
+        pic_url="/".join(fragments)
+    elif not pic_url.startswith("http"):
+        pic_url=parsed_link.scheme+"://"+parsed_link.hostname+pic_url
+
+    return pic_url
+
 
 types={"all": (".jpeg", ".jpg", ".png", ".bmp", ".gif", ".webm"),
            "pic": (".jpeg", ".jpg", ".png", ".bmp"),
@@ -111,15 +125,12 @@ parser.add_argument(
 )
 
 parser.add_argument(
-    "-n",
-    "-d",
     "-o",
-    "--name",
     action='store',
-    dest='dir_name',
+    dest='path',
     type=str,
     required=False,
-    help='Directory name'
+    help='Path'
 )
 
 
@@ -133,13 +144,13 @@ if __name__ == '__main__':
     preferred_type= tuple( chain.from_iterable( (types[type]  for type in args.types) ) )
 
 
-    if args.dir_name:
-        dir_name=args.dir_name
+    if args.path:
+        path=args.path
     else:
-        dir_name=create_dir_name(parsed_link)
+        path=create_dir_name(parsed_link)
 
-    if not os.path.exists(dir_name):
-        os.makedirs(dir_name)
+    if not os.path.exists(path):
+        os.makedirs(path)
 
     try:
         page=urllib2.urlopen(link)
@@ -154,7 +165,7 @@ if __name__ == '__main__':
     q=queue.Queue()
     
     for link in links:
-        if  not os.path.exists( os.path.join( dir_name, link.split("/")[-1])  ):
+        if  not os.path.exists( os.path.join( path, link.split("/")[-1])  ):
             q.put(link)
 
 

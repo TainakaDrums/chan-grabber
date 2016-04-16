@@ -12,4 +12,4 @@ Support imageboards
 
 Usage
 -------------------
-`chan_grabber.py -l THREAD_LINK  [-t {webm | all | pic | gif }] [-d DIR_NAME]`
+`chan_grabber.py -l THREAD_LINK  [-t {webm | all | pic | gif }] [-o PATH]`
