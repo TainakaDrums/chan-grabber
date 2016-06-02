@@ -1,3 +1,4 @@
+from __future__ import print_function
 import lxml.html as html
 import sys
 import threading
@@ -6,6 +7,7 @@ import os
 import argparse
 import time
 from itertools import chain
+from etaprogress.progress import ProgressBar
 
 if sys.version_info.major == 2:
     from urlparse import urlparse
@@ -33,12 +35,10 @@ class Download_pics(threading.Thread):
         while True:
             page=None
             link=q.get()
-
             file_name=link.split("/")[-1]
 
-            pic_url = url_treatment(link)
-
-            pic_url=urllib2.Request( pic_url, headers=headers)
+            pic_url=urllib2.Request(url_treatment(link),
+                headers=headers)
 
             while not page:
                 try:
@@ -56,10 +56,13 @@ class Download_pics(threading.Thread):
 
                 if data:
                     with open( os.path.join(path, file_name) , "wb") as file:
-                            file.write(data)
+                        file.write(data)
 
+            bar.numerator += 1
+            print(bar, end='\r')
+            sys.stdout.flush()
             q.task_done()
-            
+
 
 def create_dir_name(parsed_link):
     thread=parsed_link.path.split("/")[-1].split(".")[0]
@@ -67,10 +70,10 @@ def create_dir_name(parsed_link):
     host=parsed_link.hostname.split(".")[-2]
 
     dir_name="_".join( (host, section, thread) )
-    
+
     if os.path.split(os.getcwd())[-1] == dir_name:
         dir_name=os.getcwd()
-        
+
     return dir_name
 
 
@@ -91,10 +94,10 @@ def url_treatment(pic_url):
 
 
 types={"all": (".jpeg", ".jpg", ".png", ".bmp", ".gif", ".webm"),
-           "pic": (".jpeg", ".jpg", ".png", ".bmp"),
-           "gif":  (".gif", ),
-           "webm": (".webm",)
-}
+       "pic": (".jpeg", ".jpg", ".png", ".bmp"),
+       "gif":  (".gif", ),
+       "webm": (".webm",)
+       }
 
 
 parser = argparse.ArgumentParser(description="Download content from imageboard thread")
@@ -117,7 +120,7 @@ parser.add_argument(
     action='store',
     dest='types',
     type=str,
-    choices=list(types.keys()),
+    choices=types.keys(),
     nargs="*",
     default= ("all",),
     required=False,
@@ -135,13 +138,14 @@ parser.add_argument(
 
 
 if __name__ == '__main__':
-    
+
     args = parser.parse_args()
-    
+
+
     headers={"User-Agent":"Mozilla/5.0 (Windows NT 6.1; WOW64; rv:21.0) Gecko/20100101 Firefox/21.0"}
     link=urllib2.Request(args.thread_link, headers=headers)
     parsed_link=urlparse(args.thread_link.strip().rstrip("/"))
-    preferred_type= tuple( chain.from_iterable( (types[type]  for type in args.types) ) )
+    preferred_types= tuple( chain.from_iterable( (types[type]  for type in args.types) ) )
 
 
     if args.path:
@@ -158,19 +162,23 @@ if __name__ == '__main__':
         print("Can't open url. Code %d" % e.getcode() )
         exit()
 
-    doc=html.document_fromstring(page.read())
+
+    doc=html.document_fromstring(str(page.read()))
     res=doc.findall(".//a[@target='_blank']")
-    links={i.attrib['href'].split(":")[-1]    for i in res  if  i.attrib['href'].endswith(preferred_type) }
+    links={i.attrib['href'].split(":")[-1]    for i in res  if  i.attrib['href'].endswith(preferred_types) }
 
     q=queue.Queue()
-    
+
     for link in links:
         if  not os.path.exists( os.path.join( path, link.split("/")[-1])  ):
             q.put(link)
 
+    bar = ProgressBar(q.qsize(), max_width=60)
+    bar.numerator = 0
 
     for _ in range(10):
         thread=Download_pics()
         thread.start()
 
     q.join()
+    print()
