@@ -153,7 +153,7 @@ if __name__ == '__main__':
     else:
         path=create_dir_name(parsed_link)
 
-    if not os.path.exists(path):
+    if not os.path.isdir(path):
         os.makedirs(path)
 
     try:
