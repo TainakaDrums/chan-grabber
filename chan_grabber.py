@@ -1,67 +1,46 @@
-from __future__ import print_function
-import lxml.html as html
 import sys
-import threading
+from concurrent.futures import ThreadPoolExecutor
 import os.path
 import os
 import argparse
 import time
 from itertools import chain
 from etaprogress.progress import ProgressBar
-
-if sys.version_info.major == 2:
-    from urlparse import urlparse
-    from urllib import quote
-    import urllib2
-    from urllib2 import HTTPError
-    import Queue as queue
-else:
-    from urllib.parse import urlparse
-    from urllib.parse import quote
-    import urllib.request as urllib2
-    from urllib.error  import HTTPError as HTTPError
-    import queue
+from urllib.parse import urlparse
+from urllib.parse import quote
+import urllib.request as urllib2
+from urllib.error  import HTTPError as HTTPError
+import re
 
 
+def download_pic(link):
 
-class Download_pics(threading.Thread):
+    page=None
+    file_name=link.split("/")[-1]
 
-    def __init__ (self):
-        threading.Thread.__init__(self)
-        self.daemon = True
+    pic_url=urllib2.Request(url_treatment(link),
+        headers=headers)
 
-    def run(self):
-
-        while True:
-            page=None
-            link=q.get()
-            file_name=link.split("/")[-1]
-
-            pic_url=urllib2.Request(url_treatment(link),
-                headers=headers)
-
-            while not page:
-                try:
-                    page=urllib2.urlopen(pic_url)
-                except HTTPError as e:
-                    if e.getcode() == 503:
-                        time.sleep(2)
-                    else:
-                        print(e.getcode(), e.url)
-                        break
+    while not page:
+        try:
+            page=urllib2.urlopen(pic_url)
+        except HTTPError as e:
+            if e.getcode() == 503:
+                time.sleep(2)
+            else:
+                print(e.getcode(), e.url)
+                break
 
 
-            if page and page.getcode() == 200 :
-                data=page.read()
+    if page and page.getcode() == 200 :
+        data=page.read()
+        if data:
+            with open( os.path.join(path, file_name) , "wb") as file:
+                file.write(data)
 
-                if data:
-                    with open( os.path.join(path, file_name) , "wb") as file:
-                        file.write(data)
-
-            bar.numerator += 1
-            print(bar, end='\r')
-            sys.stdout.flush()
-            q.task_done()
+    bar.numerator += 1
+    print(bar, end='\r')
+    sys.stdout.flush()
 
 
 def create_dir_name(parsed_link):
@@ -96,8 +75,7 @@ def url_treatment(pic_url):
 types={"all": (".jpeg", ".jpg", ".png", ".bmp", ".gif", ".webm"),
        "pic": (".jpeg", ".jpg", ".png", ".bmp"),
        "gif":  (".gif", ),
-       "webm": (".webm",)
-       }
+       "webm": (".webm",)}
 
 
 parser = argparse.ArgumentParser(description="Download content from imageboard thread")
@@ -141,7 +119,6 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-
     headers={"User-Agent":"Mozilla/5.0 (Windows NT 6.1; WOW64; rv:21.0) Gecko/20100101 Firefox/21.0"}
     link=urllib2.Request(args.thread_link, headers=headers)
     parsed_link=urlparse(args.thread_link.strip().rstrip("/"))
@@ -163,22 +140,24 @@ if __name__ == '__main__':
         exit()
 
 
-    doc=html.document_fromstring(str(page.read()))
-    res=doc.findall(".//a[@target='_blank']")
-    links={i.attrib['href'].split(":")[-1]    for i in res  if  i.attrib['href'].endswith(preferred_types) }
+    data=page.read().decode("utf-8")
+    blank_pattern = re.compile(r"<a.+?_blank.+?>")
+    href_pattern = re.compile(r'href=.(.+?\.png|.+?\.jpg|.+?\.jpeg|.+?\.gif|.+?\.webm).')
 
-    q=queue.Queue()
+    reg_res=blank_pattern.findall(data)
 
-    for link in links:
-        if  not os.path.exists( os.path.join( path, link.split("/")[-1])  ):
-            q.put(link)
+    url_set = set()
+    for i in reg_res:
+        res = href_pattern.findall(i)
+        if res and res[0].startswith("/"):
+            url_set.add(res[0])
 
-    bar = ProgressBar(q.qsize(), max_width=60)
+    links={url.split(":")[-1]    for url in url_set  if  url.endswith(preferred_types)  and not os.path.exists( os.path.join( path,  url.split("/")[-1]))   }
+
+    bar = ProgressBar(len(links), max_width=60)
     bar.numerator = 0
 
-    for _ in range(10):
-        thread=Download_pics()
-        thread.start()
+    with ThreadPoolExecutor(max_workers=8) as executor:
+        executor.map(download_pic, links)
 
-    q.join()
     print()
