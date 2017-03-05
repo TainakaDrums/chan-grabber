@@ -31,7 +31,6 @@ def download_pic(link):
                 print(e.getcode(), e.url)
                 break
 
-
     if page and page.getcode() == 200 :
         data=page.read()
         if data:
@@ -70,6 +69,18 @@ def url_treatment(pic_url):
         pic_url=parsed_link.scheme+"://"+parsed_link.hostname+pic_url
 
     return pic_url
+
+
+def mkpath(args, parsed_link)
+    if args.path:
+        path=args.path
+    else:
+        path=create_dir_name(parsed_link)
+
+    if not os.path.isdir(path):
+        os.makedirs(path)
+
+    return path
 
 
 types={"all": (".jpeg", ".jpg", ".png", ".bmp", ".gif", ".webm"),
@@ -115,6 +126,8 @@ parser.add_argument(
 )
 
 
+
+
 if __name__ == '__main__':
 
     args = parser.parse_args()
@@ -123,15 +136,8 @@ if __name__ == '__main__':
     link=urllib2.Request(args.thread_link, headers=headers)
     parsed_link=urlparse(args.thread_link.strip().rstrip("/"))
     preferred_types= tuple( chain.from_iterable( (types[type]  for type in args.types) ) )
+    path = mkpath(args, parsed_link)
 
-
-    if args.path:
-        path=args.path
-    else:
-        path=create_dir_name(parsed_link)
-
-    if not os.path.isdir(path):
-        os.makedirs(path)
 
     try:
         page=urllib2.urlopen(link)
