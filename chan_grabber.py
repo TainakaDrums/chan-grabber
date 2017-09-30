@@ -71,7 +71,7 @@ def url_treatment(pic_url):
     return pic_url
 
 
-def mkpath(args, parsed_link)
+def mkpath(args, parsed_link):
     if args.path:
         path=args.path
     else:
